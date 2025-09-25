@@ -1,6 +1,372 @@
 ---
-title: "React Hooks"
-description: "Hooks for React/React Native apps"
+title: 'React Hooks'
+description: 'Hooks for React/React Native apps'
 ---
 
-This is a page.
+The `@powersync/react` package provides React hooks for use with the [JavaScript Web SDK](/broken) or [React Native SDK](/broken). These hooks are designed to support reactivity, and can be used to automatically re-render React components when query results update or to access PowerSync connectivity status changes.
+
+<Card
+    title='React hooks for PowerSync | PowerSync SDK API Reference'
+    icon='book'
+    href='https://powersync-ja.github.io/powersync-js/react-sdk'
+    horizontal
+/>
+
+# Quick Start
+
+## Setting up the PowerSync context
+
+Configure a PowerSync DB connection and add it to a context provider.
+
+```jsx
+// App.jsx
+import { PowerSyncDatabase } from '@powersync/web';
+// Or for React Native:
+// import { PowerSyncDatabase } from '@powersync/react-native';
+import { PowerSyncContext } from '@powersync/react';
+
+export const App = () => {
+    const powersync = React.useMemo(() => {
+        /* Setup PowerSync client */
+    }, []);
+
+    return (
+        <PowerSyncContext.Provider value={db}>
+            {/* ... */}
+        </PowerSyncContext.Provider>
+    );
+};
+```
+
+## Hooks
+
+### `usePowerSync`
+
+The PowerSync client can be accessed with the `usePowerSync` hook.
+
+```jsx
+// Component.jsx
+import { usePowerSync } from "@powersync/react";
+import { useEffect } from "react";
+
+export const Component = () => {
+    const powersync = usePowerSync();
+
+    useEffect(() => {
+        powersync
+            .getAll('SELECT * FROM lists')
+            .then((result) => { /* Do something */ })
+    }, []);
+
+    return <>
+        {/* ... */}
+    <>
+}
+```
+
+### `useQuery`
+
+The `useQuery` hook allows you to access the results of a [watched query](/usage/use-case-examples/watch-queries). Queries will automatically re-run when a dependant table is updated, unless you set the `runQueryOnce` flag.
+
+You can also use compilable queries (eg. [Kysely queries](/client-sdk-references/javascript-web/javascript-orm/kysely)) in place of a SQL statement string.
+
+<CodeGroup>
+
+```jsx SQL Statement
+// Component.jsx
+import { useQuery } from "@powersync/react";
+
+export const Component = () => {
+    const query = 'SELECT * FROM lists WHERE id = ?'
+    const { data: todoLists } = useQuery(
+        query,
+        ['id-1'],
+        { runQueryOnce: false },
+    );
+
+    return <>
+        {/* ... */}
+    <CodeGroup>
+}
+```
+
+```jsx Kysely Query
+// Component.jsx
+import { useQuery } from '@powersync/react';
+import { db } from '../db'; // Kysely-wrapped PowerSync client
+
+export const Component = () => {
+    const query = db.selectFrom('lists').selectAll().where('id', '=', 'id-1');
+    const { data: todoLists } = useQuery(query, [], { runQueryOnce: false });
+
+    return <>{/* ... */}</>;
+};
+```
+
+</CodeGroup>
+
+The `useQuery` hook also provides `isLoading` and `isFetching` flags in order to allow for the handling of intermediate states.
+
+```jsx
+// Component.jsx
+import { useQuery } from "@powersync/react";
+
+export const Component = () => {
+    const {
+        data: todoLists,
+        isLoading,
+        isFetching
+    } = useQuery('SELECT * FROM lists');
+
+    return <>
+        { isFetching && <>{ /* Handle fetching state */ }</> }
+        { isLoading && <>{ /* Handle loading state */ }</> }
+
+        { !(isLoading || isFetching) && <>{/* ... */}</> }
+    <>
+}
+```
+
+### `useSuspenseQuery`
+
+The `useSuspenseQuery` hook also allows you to access the results of a [watched query](/usage/use-case-examples/watch-queries), but intermediate states are handled through [React Suspense](https://react.dev/reference/react/Suspense).
+
+The `useSuspenseQuery` hook does **not** provide `isLoading` and `isFetching` flags, nor does it provide an `error` object. Intermediate states and errors should be handled via [`<Suspense>`](https://react.dev/reference/react/Suspense#suspense) and [`<ErrorBoundary>`](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary) respectively.
+
+```jsx
+// SuspenseComponent.jsx
+import { ErrorBoundary } from 'react-error-boundary';
+import { Suspense } from 'react';
+import { useSuspenseQuery } from '@powersync/react';
+
+const ComponentContent = () => {
+    const { data: todoLists } = useSuspenseQuery('SELECT * FROM lists');
+
+    return <>{/* ... */}</>;
+};
+
+// Handle loading/error states
+const ErrorFallback = () => <div>Something went wrong</div>;
+const LoadingFallback = () => <div>Loading todo lists...</div>;
+
+// Wrap the content of your component in ErrorBoundary and Suspense components.
+export const SuspenseComponent = () => {
+    return (
+        <ErrorBoundary fallback={ErrorFallback}>
+            <Suspense fallback={LoadingFallback}>
+                <ComponentContent />
+            </Suspense>
+        </ErrorBoundary>
+    );
+};
+```
+
+#### Preventing flickers to Suspense when using `useSuspenseQuery`
+
+When data in the dependent tables changes, `useSuspenseQuery` automatically updates without suspending. However, changing `useSuspenseQuery`'s parameters causes the hook to restart and re-enter a suspending state, which triggers the `Suspense` fallback.
+
+To prevent this and keep displaying the stale data until the new data is loaded, wrap the parameter changes in React's `startTransition` or use `useDeferredValue`.
+
+<CodeGroup>
+
+```jsx startTransition
+// SuspenseComponent.jsx
+import { ErrorBoundary } from 'react-error-boundary';
+import React, { Suspense } from 'react';
+import { useSuspenseQuery } from '@powersync/react';
+
+const ComponentContent = () => {
+    const [query, setQuery] = useState('SELECT * FROM lists');
+    const { data: todoLists } = useSuspenseQuery(query);
+
+    return (
+        <>
+            <button
+                onClick={() => {
+                    React.startTransition(() =>
+                        setQuery('SELECT * FROM lists LIMIT 1')
+                    );
+                }}
+            >
+                Update query
+            </button>
+            <>{/* ... */}</>
+        </CodeGroup>
+    );
+};
+
+export const SuspenseComponent = () => {
+    return (
+        <ErrorBoundary fallback={<div>Something went wrong</div>}>
+            <Suspense fallback={<div>Loading todo lists...</div>}>
+                <ComponentContent />
+            </Suspense>
+        </ErrorBoundary>
+    );
+};
+```
+
+```jsx useDeferredValue
+// SuspenseComponent.jsx
+import { ErrorBoundary } from 'react-error-boundary';
+import React, { Suspense } from 'react';
+import { useSuspenseQuery } from '@powersync/react';
+
+const ComponentContent = () => {
+    const [query, setQuery] = useState('SELECT * FROM lists');
+    const deferredQuery = React.useDeferredValue(query);
+    const { data: todoLists } = useSuspenseQuery(deferredQuery);
+
+    return (
+        <>
+            <button
+                onClick={() => setQuery('SELECT * FROM lists LIMIT 1')}
+            >
+                Update query
+            </button>
+            <>{/* ... */}</>
+        </CodeGroup>
+    );
+};
+
+export const SuspenseComponent = () => {
+    return (
+        <ErrorBoundary fallback={<div>Something went wrong</div>}>
+            <Suspense fallback={<div>Loading todo lists...</div>}>
+                <ComponentContent />
+            </Suspense>
+        </ErrorBoundary>
+    );
+};
+```
+
+</CodeGroup>
+
+### `useStatus`
+
+The `useStatus` hook returns the PowerSync client's current status.
+
+```jsx
+// Component.jsx
+
+export const Component = () => {
+    const status = useStatus();
+
+    return <>
+        {status.connected && <>{/* ... */}</>}
+        {status.hasSynced && <>{/* ... */}</>}
+    <>
+}
+```
+
+### `useWatchedQuerySubscription`
+
+The `useWatchedQuerySubscription` hook lets you access the state of an externally managed watched query. Managing queries outside of component enables in-memory caching and sharing of results between multiple subscribers. This reduces async loading time during component mount (thanks to in-memory caching) and minimizes the number of SQLite queries (by sharing results between multiple components).
+
+```jsx
+// Component.jsx
+import { powersync } from '../db';
+
+// The query is external to all React components.
+// The data is kept up-to-date in the background and results can be shared across subscribers.
+const query = powersync
+    .query({ sql: 'SELECT * FROM lists' })
+    .differentialWatch();
+
+export const Component = () => {
+    // Subscribes to `query`.
+    // The subscription is cleaned up automatically when `Component` unmounts.
+    // The `data` value always reflects the latest state of the query.
+    const { data } = useWatchedQuerySubscription(query);
+
+    return <>{/* ... */}</>;
+};
+```
+
+## Preventing unnecessary re-renders
+
+### Higher-order components
+
+The `useQuery` hook returns a JS object with multiple fields. Whenever an update is triggered, a new object reference is created to hold the fields. This can cause dependent components to re-render on any field change, even if they only rely on one field.
+
+For this reason, it is recommended to call `useQuery` in a higher-order component and to pass the required data to memoized child components.
+
+```jsx
+// Component.jsx
+export const HigherOrderComponent = () => {
+    const { data, isLoading, isFetching, error } = useQuery('...');
+
+    /* Handle intermediate states */
+
+    return (
+        // Other components...
+        
+        // If not memoized:
+        // - ChildComponent re-renders on any query result change, eg. if `isFetching` alternates.
+        // If memoized:
+        // - ChildComponent re-renders when the `data` field changes, not other fields.
+        <ChildComponent data={data} />
+    );
+};
+```
+
+### Incremental queries
+
+By default, watched queries are triggered on _any_ change to the underlying tables. These changes may not be relevant to the query, but will still update the `data` and result array references, which will trigger a re-render in any dependent components.
+
+[Incremental watched queries](/usage/use-case-examples/watch-queries#incremental-watch-queries) will preserve the object reference to the `data` object's internal array if the result set is unchanged. The internal array items will also maintain their object references if unchanged.
+
+**NB:** Remember that child components still need to be memoized to avoid re-renders.
+
+```jsx
+// Component.jsx
+export const Component = () => {
+    const { data, isLoading, isFetching } = useQuery(
+        'SELECT * FROM cats WHERE breed = "tabby"',
+        [],
+        {
+            rowComparator: {
+                keyBy: (item) => item.id,
+                compareBy: (item) => JSON.stringify(item),
+            },
+        }
+    );
+
+    /* Handle intermediate states */
+
+    return (
+        // The `data` array reference will be preserved if no changes occur to the result set.
+        // The `data` array's individual item references will also be preserved if unchanged.
+        // NB: CatDisplay must be memoized to prevent re-renders.
+        <CatDisplay cats={data} />
+    );
+};
+```
+
+### Disable fetch reporting
+
+The `useQuery` hook can be configured to not report `isFetching`. This can reduce the number of events emitted by the hook, potentially saving renders if the `isFetching` flag is unneeded.
+
+This can be combined with the previous approaches to further reduce re-renders.
+
+```jsx
+// Component.jsx
+export const Component = () => {
+    const { data, isLoading } = useQuery('SELECT * FROM cats', [], {
+        rowComparator: {
+            keyBy: (item) => item.id,
+            compareBy: (item) => JSON.stringify(item),
+        },
+        reportFetching: false,
+    });
+
+    /* Handle `isLoading`... */
+
+    return (
+        // The `data` array reference will be preserved if no changes occur to the result set.
+        // The `data` array's individual item references will also be preserved if unchanged.
+        // NB: CatDisplay must be memoized to prevent re-renders.
+        <CatDisplay cats={data}>
+    )
+}
+```

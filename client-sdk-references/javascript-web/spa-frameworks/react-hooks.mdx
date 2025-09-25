@@ -5,12 +5,20 @@ description: 'Hooks for React/React Native apps'
 
 The `@powersync/react` package provides React hooks for use with the [JavaScript Web SDK](/broken) or [React Native SDK](/broken). These hooks are designed to support reactivity, and can be used to automatically re-render React components when query results update or to access PowerSync connectivity status changes.
 
-<Card
-    title='React hooks for PowerSync | PowerSync SDK API Reference'
-    icon='book'
-    href='https://powersync-ja.github.io/powersync-js/react-sdk'
-    horizontal
-/>
+<Columns cols={2}>
+    <Card
+        title='API Reference'
+        icon='book'
+        href='https://powersync-ja.github.io/powersync-js/react-sdk'
+        horizontal
+    />
+    <Card
+        title='@powersync/react - npm'
+        icon='npm'
+        href='https://www.npmjs.com/package/@powersync/react'
+        horizontal
+    />
+</Columns>
 
 # Quick Start
 
@@ -300,7 +308,7 @@ export const HigherOrderComponent = () => {
 
     return (
         // Other components...
-        
+
         // If not memoized:
         // - ChildComponent re-renders on any query result change, eg. if `isFetching` alternates.
         // If memoized:

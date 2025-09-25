@@ -1,0 +1,21 @@
+---
+title: Overview
+description: Official packages for React/React Native hooks
+---
+
+The `@powersync/react` package provides React/React Native hooks for use with the [JavaScript Web SDK](/client-sdk-references/javascript-web) or the [React Native SDK](/client-sdk-references/react-native-and-expo).
+
+### Which package should I choose for queries?
+
+For React or React Native apps:
+
+* The [`@powersync/react`](#react-hooks) package is best for most basic use cases, especially when you only need reactive queries with loading and error states.
+
+* For more advanced scenarios, such as query caching and pagination, TanStack is a powerful solution. The [`@powersync/tanstack-react-query`](#tanstack-query) package extends the `useQuery` hook from `@powersync/react` and adds functionality from [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview), making it a better fit for advanced use cases or performance-optimized apps.
+
+## Packages
+
+<CardGroup cols={2}>
+<Card title="React/React Native" icon='react' color='#61DBFB' href='/client-sdk-references/javascript-web/spa-frameworks/react-hooks' horizontal />
+<Card title="Tanstack Query for React" icon='react' href='/client-sdk-references/javascript-web/spa-frameworks/tanstack-query' horizontal />
+</CardGroup>

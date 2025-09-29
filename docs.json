@@ -125,6 +125,7 @@
                   "usage/sync-rules/data-queries",
                   "usage/sync-rules/types",
                   "usage/sync-rules/client-id",
+                  "usage/sync-rules/compatibility",
                   "usage/sync-rules/operators-and-functions",
                   "usage/sync-rules/schemas-and-connections",
                   "usage/sync-rules/case-sensitivity",
@@ -185,6 +186,7 @@
                   "usage/use-case-examples/full-text-search",
                   "usage/use-case-examples/infinite-scrolling",
                   "usage/use-case-examples/watch-queries",
+                  "usage/use-case-examples/high-performance-diffs",
                   "usage/use-case-examples/offline-only-usage",
                   "usage/use-case-examples/postgis",
                   "usage/use-case-examples/prioritized-sync",
@@ -323,9 +325,17 @@
               },
               {
                 "group": "Kotlin Multiplatform",
-                "icon": "k",
+                "icon": "/logo/kotlin.svg",
                 "pages": [
                   "client-sdk-references/kotlin-multiplatform",
+                  {
+                    "group": "SQL Library Support",
+                    "pages": [
+                      "client-sdk-references/kotlin-multiplatform/libraries/overview",
+                      "client-sdk-references/kotlin-multiplatform/libraries/sqldelight",
+                      "client-sdk-references/kotlin-multiplatform/libraries/room"
+                    ]
+                  },
                   "client-sdk-references/kotlin-multiplatform/usage-examples"
                 ]
               },
@@ -381,6 +391,8 @@
                   "self-hosting/lifecycle-maintenance/securing-your-deployment",
                   "self-hosting/lifecycle-maintenance/healthchecks",
                   "self-hosting/lifecycle-maintenance/telemetry",
+                  "self-hosting/lifecycle-maintenance/metrics",
+                  "self-hosting/lifecycle-maintenance/diagnostics",
                   "self-hosting/lifecycle-maintenance/migrating",
                   "self-hosting/lifecycle-maintenance/multiple-instances"
                 ]
@@ -469,13 +481,14 @@
                 "pages": [
                   "resources/usage-and-billing",
                   "resources/usage-and-billing/pricing-example",
-                  "resources/usage-and-billing-faq"
+                  "resources/usage-and-billing/usage-and-billing-faq"
                 ]
               },
               "resources/ai-tools",
               "resources/performance-and-limits",
+              "resources/production-readiness-guide",
+              "resources/supported-platforms",
               "resources/feature-status",
-              "resources/supported-hardware",
               "resources/faq",
               "resources/local-first-software",
               "resources/release-notes",
@@ -657,6 +670,18 @@
     {
       "source": "/self-hosting/telemetry",
       "destination": "/self-hosting/lifecycle-maintenance/telemetry"
+    },
+    {
+      "source": "/self-hosting/metrics",
+      "destination": "/self-hosting/lifecycle-maintenance/metrics"
+    },
+    {
+      "source": "/self-hosting/diagnostics",
+      "destination": "/self-hosting/lifecycle-maintenance/diagnostics"
+    },
+    {
+      "source": "/resources/usage-and-billing-faq",
+      "destination": "/resources/usage-and-billing/usage-and-billing-faq"
     }
   ]
 }

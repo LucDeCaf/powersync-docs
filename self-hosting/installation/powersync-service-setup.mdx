@@ -54,9 +54,9 @@ If you are rolling your own Docker environment, you can include this init script
       - 'sleep 10 && mongosh --host mongo:27017 --eval ''try{rs.status().ok && quit(0)} catch {} rs.initiate({_id: "rs0", version: 1, members: [{ _id: 0, host : "mongo:27017" }]})'''
 ```
 
-### Postgres Storage (Beta)
+### Postgres Storage
 
-Available since version 1.3.8 of [`journeyapps/powersync-service`](https://hub.docker.com/r/journeyapps/powersync-service), you can use Postgres as an alternative storage backend for sync buckets. This feature is currently in [beta](/resources/feature-status).
+Available since version 1.3.8 of [`journeyapps/powersync-service`](https://hub.docker.com/r/journeyapps/powersync-service), you can use Postgres as an alternative storage backend for sync buckets.
 
 #### Database Setup
 
@@ -106,9 +106,7 @@ The config file schema is also available here:
 
 Below is a skeleton config file you can copy and paste to edit locally:
 
-```yaml
-# config.yaml
-
+```yaml config.yaml
 # Settings for source database replication
 replication:
   # Specify database connection details
@@ -210,9 +208,7 @@ See examples here:
 
 Your project's [sync rules](/self-hosting/installation/powersync-service-setup#sync-rules) can either be specified within your configuration file directly, or in a separate file that is referenced.
 
-```yaml
-# config.yaml
-
+```yaml config.yaml
 # Define sync rules:
 sync_rules:
   content: |
@@ -229,7 +225,7 @@ sync_rules:
 
 We recommend starting with syncing a single table in a [global bucket](/usage/sync-rules/example-global-data). Choose a table and sync it by adding the following to your sync rules:
 
-```yaml
+```yaml config.yaml
 sync_rules:
   content: |
     bucket_definitions:

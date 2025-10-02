@@ -3,4 +3,201 @@ title: "Vue Composables"
 description: "PowerSync provides composables for Vue.js"
 ---
 
-This is a page about Vue Composables.
+<Columns cols={2}>
+    <Card
+        title='API Reference'
+        icon='book'
+        href='https://powersync-ja.github.io/powersync-js/vue-sdk'
+        horizontal
+    />
+    <Card
+        title='@powersync/vue'
+        icon='npm'
+        href='https://www.npmjs.com/package/@powersync/vue'
+        horizontal
+    />
+</Columns>
+
+The `@powersync/vue` package provides a Vue-specific wrapper for use with the [JavaScript Web SDK](/client-sdk-references/javascript-web). The package provides Vue Composables that are designed to support reactivity and can be used to automatically re-render Vue components when query results update, or to access PowerSync connectivity status changes.
+
+# Quick Start
+
+## Setting up the PowerSync plugin
+
+Configure a PowerSync DB connection, create a PowerSync Vue plugin, and integrate it with a Vue app.
+
+```jsx
+// main.js
+import { PowerSyncDatabase } from '@powersync/web';
+import App from './App.vue';
+import { createPowerSyncPlugin } from '@powersync/vue';
+
+// Configure PowerSync instance
+const db = new PowerSyncDatabase(/* ... */);
+
+const app = createApp(App);
+const powerSyncPlugin = createPowerSyncPlugin({ database: db });
+
+app.use(powerSyncPlugin);
+app.mount('#app');
+```
+
+## Accessing PowerSync
+
+The configured PowerSync instance is available via the [`usePowerSync`](#usepowersync) composable.
+
+```html TodoListsDisplay.vue
+<script setup>
+import { usePowerSync } from '@powersync/vue';
+import { ref } from 'vue';
+
+// Access the PowerSync instance
+const powersync = usePowerSync();
+const list = ref([]);
+
+powersync.value.getAll('SELECT * from lists').then((l) => list.value = l);
+</script>
+
+<template>
+    <ul>
+        <li v-for="l in list" :key="l.id">{{ l.name }}</li>
+    </ul>
+</template>
+```
+
+## Overriding the PowerSync instance
+
+The `createPowerSyncPlugin` function makes the PowerSync instance available to all components in the application. This is the recommended approach; however, there may be situations where an app-wide setup isn't desirable, e.g. when **using multiple PowerSync clients within one app**.
+
+In such cases, you can use the `providePowerSync` function within a parent component to override the PowerSync instance for all children components. This allows for the use of different PowerSync clients within one application. If `providePowerSync` has been called multiple times within the same hierarchy, the **closest** (lowest) `providePowerSync` call will be used.
+
+**NB:** The `providePowerSync` function can be used regardless of whether or not `createPowerSyncPlugin` has also been used.
+
+```html Container.vue
+<script setup>
+import { PowerSyncDatabase } from '@powersync/web';
+import { providePowerSync } from '@powersync/vue';
+
+// Configure PowerSync instance
+const db = new PowerSyncDatabase(/* ... */);
+
+// Child components will use this client when using the other composables
+providePowerSync(db);
+</script>
+```
+
+## Reacting to database changes
+
+The `@powersync/vue` package provides composables for managing [Watched Queries](/usage/use-case-examples/watch-queries) in order to make working with reactive data easier. Specifically, the `useQuery` and `useWatchedQuerySubscription` composables allow you to rerun a query when its dependant tables are updated.
+
+### Using `useQuery`
+
+The `useQuery` composable allows you to subscribe to the results of a WatchedQuery instance. The data provided by the composable are reactive and will be updated whenever the query's dependant tables are updated.
+
+```html TodoListsDisplay.vue
+<script setup>
+import { usePowerSync, useQuery } from '@powersync/vue';
+import { ref } from 'vue';
+
+/* The values returned by `useQuery` will automatically update
+when the `query` value changes or the "lists" table is updated */
+const query = ref('SELECT * FROM lists');
+const {
+    data: list,
+    isLoading,
+    isFetching,
+    error
+} = useQuery(query);
+</script>
+
+<template>
+    <!-- Pressing the button will change the query and rerender the component -->
+    <button @click='query = "SELECT * FROM lists LIMIT 10"'>
+        Apply filter
+    </button>
+    <ul>
+        <li v-for="l in list" :key="l.id">{{ l.name }}</li>
+    </ul>
+</template>
+```
+
+`useQuery` can also be configured to **only run once**. The query can be manually re-executed by using the provided `refresh` function.
+
+```html TodoListsDisplay.vue
+<script setup>
+import { useQuery } from '@powersync/vue';
+
+const { data: list, refresh } = useQuery('SELECT * FROM lists', [], {
+  runQueryOnce: true
+});
+</script>
+
+<template>
+  <ul>
+    <li v-for="l in list" :key="l.name">{{ l.name }}</li>
+  </ul>
+  <button @click="refresh">Refresh list</button>
+</template>
+```
+
+### Using externally managed queries
+
+The `useWatchedQuerySubscription` composable lets you access the state of an externally managed [Watched Query](/usage/use-case-examples/watch-queries). Managing queries outside of component enables in-memory caching and sharing of results between multiple subscribers. This reduces async loading time during component mount (thanks to in-memory caching) and minimizes the number of SQLite queries (by sharing results between multiple components).
+
+```js listsQuery.js
+import { usePowerSync } from '@powersync/vue';
+
+// Create and export a shared WatchedQuery instance.
+// The `getListsQuery` function should be used whenever you want access to the query's data.
+let listsQuery;
+export function getListsQuery() {
+  if (!listsQuery) {
+    // Note: usePowerSync() must be called in a Vue setup context, so you may need to
+    // pass the PowerSync instance here if you are not using the default context.
+    const powerSync = usePowerSync();
+    listsQuery = powerSync.value.query({ sql: 'SELECT * FROM lists' }).differentialWatch();
+  }
+  return listsQuery;
+}
+```
+
+```html TodoListsDisplay.vue
+<script setup>
+import { useWatchedQuerySubscription } from '@powersync/vue';
+import { getListsQuery } from './listsQuery';
+
+// Subscribe to the shared `listsQuery` instance. The subscription is automatically
+// cleaned up when the component unmounts. The `data` value always reflects
+// the latest state of the query.
+const { data: lists } = useWatchedQuerySubscription(getListsQuery());
+</script>
+
+<template>
+  <ul>
+    <li v-for="l in lists" :key="l.id">{{ l.name }}</li>
+  </ul>
+</template>
+```
+
+## Preventing unnecessary re-renders
+
+TODO
+
+## TypeScript Support
+
+You can specify he return type for rows returned by `useQuery`. Remember to use `lang="ts"` in your `script setup` block.
+
+```html TodoListsDisplay.vue
+<script setup lang="ts">
+import { useQuery } from '@powersync/vue';
+
+const { data } = useQuery<{ id: string, name: string }>('SELECT id, name FROM lists');
+</script>
+
+<template>
+   <ul>
+       <li v-for="l in data" :key="l.id">{{ l.name }}</li>
+   </ul>
+</template>
+```
+
